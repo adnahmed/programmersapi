@@ -36,8 +36,12 @@ func main() {
 		addCommonResponseHeaders(c)
 		var invite Invite
 		c.BindJSON(&invite)
-		InviteUser(invite.Login)
-		c.JSON(http.StatusAccepted, nil)
+		err := InviteUser(invite.Login)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"errorMessage": err.Error()})
+		} else {
+			c.JSON(http.StatusAccepted, nil)
+		}
 	})
 
 	router.Run(":" + port)

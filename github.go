@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -22,8 +24,7 @@ const appConfigErrorMessage = "App configuration error"
 const gitHubErrorMessage = "Github API error"
 
 func createHttpClient() *http.Client {
-	client := &http.Client{}
-	return client
+	return &http.Client{}
 }
 
 func addGithubLoginCredentialsHeader(client *http.Client, req *http.Request) {
@@ -38,10 +39,6 @@ func addGithubLoginCredentialsHeader(client *http.Client, req *http.Request) {
 	}
 
 	req.SetBasicAuth(username, passwd)
-	_, err := client.Do(req)
-	if err != nil {
-		panic(gitHubErrorMessage)
-	}
 }
 
 func getBodyAsString(resp *http.Response) []byte {
@@ -124,17 +121,24 @@ func GetUserLists() *Users {
 	return &Users{Active: *activeUsers, Pending: *pendingInviteUsers}
 }
 
-func InviteUser(login string) {
+func InviteUser(login string) error {
 	client := createHttpClient()
 
 	userResponse := struct {
 		Id int `json:"id"`
 	}{}
-	_, body := getUrlJson(client, `https://api.github.com/users/`+login)
+	getResp, body := getUrlJson(client, `https://api.github.com/users/`+login)
 	err := json.Unmarshal(body, &userResponse)
 	if err != nil {
 		panic(gitHubErrorMessage)
 	}
+	if getResp.StatusCode == http.StatusNotFound {
+		error := "GitHub user not found: " + login
+		log.Println(error)
+		return errors.New(error)
+	}
+
+	log.Println("Inviting user: " + strconv.Itoa(userResponse.Id))
 
 	invite := struct {
 		Invitee_id int    `json:"invitee_id"`
@@ -147,10 +151,9 @@ func InviteUser(login string) {
 	if err != nil {
 		panic(gitHubErrorMessage)
 	}
-	print(string(json))
 
 	req, err := http.NewRequest(
-		"POST",
+		http.MethodPost,
 		"https://api.github.com/orgs/programmers-from-the-same-company/invitations",
 		strings.NewReader(string(json)))
 	if err != nil {
@@ -160,6 +163,16 @@ func InviteUser(login string) {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	addGithubLoginCredentialsHeader(client, req)
 
-	// TODO: There is an issue with parsing the response, figure that out
-	client.Do(req)
+	resp, postErr := client.Do(req)
+	if postErr != nil {
+		log.Panic(postErr.Error())
+	}
+	if resp.StatusCode != http.StatusCreated {
+		log.Println("Invite unsuccessful")
+		log.Println(resp)
+		log.Println(err)
+		return errors.New("Invite unsuccessful")
+	}
+
+	return nil
 }

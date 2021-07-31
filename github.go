@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -21,7 +21,12 @@ type Users struct {
 const appConfigErrorMessage = "App configuration error"
 const gitHubErrorMessage = "Github API error"
 
-func getUsers(url string) *[]User {
+func createHttpClient() *http.Client {
+	client := &http.Client{}
+	return client
+}
+
+func addGithubLoginCredentialsHeader(client *http.Client, req *http.Request) {
 	var username string = os.Getenv("GITHUB_USERNAME")
 	if username == "" {
 		panic(appConfigErrorMessage)
@@ -32,34 +37,56 @@ func getUsers(url string) *[]User {
 		panic(appConfigErrorMessage)
 	}
 
-	client := &http.Client{}
+	req.SetBasicAuth(username, passwd)
+	_, err := client.Do(req)
+	if err != nil {
+		panic(gitHubErrorMessage)
+	}
+}
+
+func getBodyAsString(resp *http.Response) []byte {
+	if resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		panic(gitHubErrorMessage)
+	}
+	return body
+}
+
+func getUrlJson(client *http.Client, url string) (*http.Response, []byte) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		panic(gitHubErrorMessage)
+	}
+
+	addGithubLoginCredentialsHeader(client, req)
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(gitHubErrorMessage)
+	}
+	if resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
+	body := getBodyAsString(resp)
+	return resp, body
+}
+
+func getUsers(url string) *[]User {
+	client := createHttpClient()
 
 	var users []User
 	nextUrl := url
 
 	for nextUrl != "" {
-		fmt.Println("URL: " + nextUrl)
-		req, err := http.NewRequest("GET",
-			nextUrl,
-			nil)
+		resp, body := getUrlJson(client, nextUrl)
+
+		var userList []User
+		err := json.Unmarshal(body, &userList)
 		if err != nil {
-			panic(gitHubErrorMessage)
-		}
-		req.SetBasicAuth(username, passwd)
-		resp, err := client.Do(req)
-		if err != nil {
-			panic(gitHubErrorMessage)
-		}
-		if resp.Body != nil {
-			defer resp.Body.Close()
-		}
-		body, readErr := ioutil.ReadAll(resp.Body)
-		if readErr != nil {
-			panic(gitHubErrorMessage)
-		}
-		var userList []User = []User{}
-		jsonErr := json.Unmarshal(body, &userList)
-		if jsonErr != nil {
 			panic(gitHubErrorMessage)
 		}
 
@@ -80,7 +107,6 @@ func getUsers(url string) *[]User {
 		}
 	}
 
-	print(len(users))
 	return &users
 }
 
@@ -96,4 +122,44 @@ func GetUserLists() *Users {
 	activeUsers := getActiveUsersFromGithub()
 	pendingInviteUsers := getPendingInviteUsers()
 	return &Users{Active: *activeUsers, Pending: *pendingInviteUsers}
+}
+
+func InviteUser(login string) {
+	client := createHttpClient()
+
+	userResponse := struct {
+		Id int `json:"id"`
+	}{}
+	_, body := getUrlJson(client, `https://api.github.com/users/`+login)
+	err := json.Unmarshal(body, &userResponse)
+	if err != nil {
+		panic(gitHubErrorMessage)
+	}
+
+	invite := struct {
+		Invitee_id int    `json:"invitee_id"`
+		Role       string `json:"role"`
+	}{
+		Invitee_id: userResponse.Id,
+		Role:       "direct_member",
+	}
+	json, err := json.Marshal(invite)
+	if err != nil {
+		panic(gitHubErrorMessage)
+	}
+	print(string(json))
+
+	req, err := http.NewRequest(
+		"POST",
+		"https://api.github.com/orgs/programmers-from-the-same-company/invitations",
+		strings.NewReader(string(json)))
+	if err != nil {
+		log.Print(err.Error())
+		panic(gitHubErrorMessage)
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	addGithubLoginCredentialsHeader(client, req)
+
+	// TODO: There is an issue with parsing the response, figure that out
+	client.Do(req)
 }

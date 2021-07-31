@@ -1,0 +1,7 @@
+{
+  "name": "Programmers Company API",
+  "description": "REST API for the Programmers Who Work in the Same Company",
+  "keywords": [
+  ],
+  "repository": "http://github.com/programmers-from-the-same-company/programmersapi"
+}

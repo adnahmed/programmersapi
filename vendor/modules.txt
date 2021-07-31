@@ -1,0 +1,30 @@
+# github.com/cespare/xxhash/v2 v2.1.1
+github.com/cespare/xxhash/v2
+# github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f
+github.com/dgryski/go-rendezvous
+# github.com/gin-gonic/gin v0.0.0-20150626140855-4cc2de6207f4
+github.com/gin-gonic/gin
+github.com/gin-gonic/gin/binding
+github.com/gin-gonic/gin/render
+# github.com/go-redis/redis/v8 v8.11.0
+github.com/go-redis/redis/v8
+github.com/go-redis/redis/v8/internal
+github.com/go-redis/redis/v8/internal/hashtag
+github.com/go-redis/redis/v8/internal/hscan
+github.com/go-redis/redis/v8/internal/pool
+github.com/go-redis/redis/v8/internal/proto
+github.com/go-redis/redis/v8/internal/rand
+github.com/go-redis/redis/v8/internal/util
+# github.com/heroku/x v0.0.0-20171004170240-705849e307dd
+github.com/heroku/x/hmetrics
+github.com/heroku/x/hmetrics/onload
+# github.com/manucorporat/sse v0.0.0-20150604091100-c142f0f1baea
+github.com/manucorporat/sse
+# github.com/mattn/go-colorable v0.0.0-20150625154642-40e4aedc8fab
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.0-20150814002629-7fcbc72f853b
+github.com/mattn/go-isatty
+# golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
+golang.org/x/net/context
+# gopkg.in/bluesuncorp/validator.v5 v5.9.1
+gopkg.in/bluesuncorp/validator.v5
